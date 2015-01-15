@@ -2,7 +2,6 @@ require 'open-uri'
 require 'nokogiri'
 
 class Clerk
-
   CALENDAR_SELECTOR = '.calendar-wrap'
   ARTICLE_SELECTOR = 'article'
   EVENT_TITLE_SELECTOR = '.event-info.title'
@@ -33,28 +32,29 @@ class Clerk
     csv
   end
 
-  private
-
   def get_event_info(event)
     info = ''
     info << event.css(EVENT_TITLE_SELECTOR).to_s.scan(/<p class="event-info title">(.*?)</).join + ','
-    info << cleanse_of_commas(event.css(DATE_SELECTOR)[0].to_s.scan(/,(.*?)</).join) + ','
+    info << cleanse_of_commas(event.css(DATE_SELECTOR)[0].to_s.scan(/, (.*?)</).join) + ','
     info << event.css(TIME_SELECTOR)[0].to_s.scan(/<span class="time">(.*?)</).join + ','
     info << cleanse_of_html_code(event.css(LOCATION_NAME_SELECTOR).to_s.to_s.scan(/<span class="fn org">(.*?)</).join) + ' - '
     info << event.css(ADDRESS_SELECTOR).to_s.scan(/<span class="address">(.*?)</).join + ' '
     info << event.css('.city').to_s.scan(/<span class="city">(.*?)</).join + ','
-    if buying_option?(event.css(EXTRA_INFORMATION_SELECTOR)[4].to_s)
-      info << ' '
-    else
-      info << event.css('p')[4].to_s.scan(/<p>(.*?)</).join
-    end
+    info = add_extra_details(event, info)
     info << "\n"
   end
 
-  def buying_option?(element)
-    if element.to_s == '<p class="event-info buying-options">
+  def add_extra_details(event, info)
+    if extra_details?(event.css(EXTRA_INFORMATION_SELECTOR)[4].to_s)
+      info << event.css('p')[4].to_s.scan(/<p>(.*?)</).join
+    else
+      info << ' '
+    end
+    info
+  end
 
-      </p>'
+  def extra_details?(element)
+    if element.include? '<p>'
       true
     else
       false
